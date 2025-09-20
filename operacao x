@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Gestão e Análise - Consolidação</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        html.dark-mode { --tw-bg-opacity: 1; background-color: rgb(26 32 44 / var(--tw-bg-opacity)); }
+        body { font-family: 'Inter', sans-serif; background-color: #1a202c; color: #e2e8f0; }
+        .card { background-color: #2d3748; border-radius: 12px; padding: 1.5rem; }
+        .btn-sm { padding: 0.25rem 0.75rem; font-size: 0.8rem; }
+        .tab-button { padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background-color 0.3s, color 0.3s; border: 2px solid transparent; }
+        .tab-button.active { background-color: #4299e1; color: white; }
+        .tab-button:not(.active) { background-color: #2d3748; color: #a0aec0; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .kpi-card { transition: transform 0.2s; }
+        .kpi-card:hover { transform: translateY(-5px); }
+    </style>
+</head>
+<body class="p-6">
+    <div class="container mx-auto max-w-7xl">
+        <header class="flex flex-col sm:flex-row justify-between items-center mb-8">
+            <div class="flex items-center">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/DHL_logo.svg/2560px-DHL_logo.svg.png" alt="DHL Logo" class="h-10 mr-4 filter invert">
+                <h1 class="text-3xl font-bold text-white">Painel de Operações</h1>
+            </div>
+            <div id="header-controls" class="flex items-center gap-4 mt-4 sm:mt-0">
+                 <button id="captureDashboard" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md"><i class="fas fa-camera mr-2"></i> Capturar</button>
+            </div>
+        </header>
+
+        <!-- Abas de Navegação -->
+        <nav class="flex justify-center space-x-4 mb-8">
+            <button class="tab-button active" data-tab="gestao-docas">Gestão de Docas</button>
+            <button class="tab-button" data-tab="analise-duplas">Análise de Duplas</button>
+        </nav>
+
+        <!-- Conteúdo das Abas -->
+        <div id="gestao-docas" class="tab-content active">
+            <!-- PAINEL DE GESTÃO DE DOCAS -->
+            <div class="card mb-6">
+                <h2 class="text-xl font-semibold mb-4 text-center">Controlos Principais</h2>
+                <div class="flex flex-col sm:flex-row justify-center gap-4 flex-wrap">
+                    <button id="toggleQueueBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-md transition-colors">
+                        <i class="fas fa-play mr-2"></i> Ativar Fila Automática
+                    </button>
+                    <button id="showCarretaModalBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-md">
+                        <i class="fas fa-truck-moving mr-2"></i> Docar Carreta Manualmente
+                    </button>
+                    <button id="resetDockManagementBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-md">
+                        <i class="fas fa-sync-alt mr-2"></i> Reiniciar Operação do Dia
+                    </button>
+                </div>
+            </div>
+            <div class="grid md:grid-cols-3 gap-6 mb-8 text-center">
+                <div class="card"><div class="text-sm font-semibold text-gray-400">Pacotes Descarregados</div><p id="pacotesDescarregados" class="text-4xl font-bold mt-2 text-green-400">0</p></div>
+                <div class="card"><div class="text-sm font-semibold text-gray-400">Caminhões à Espera</div><p id="caminhoesEspera" class="text-4xl font-bold mt-2 text-yellow-400">0</p></div>
+                <div class="card"><div class="text-sm font-semibold text-gray-400">Docas Ocupadas</div><p id="docasOcupadas" class="text-4xl font-bold mt-2 text-blue-400">0</p></div>
+            </div>
+             <div class="grid lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="card">
+                        <h2 class="text-xl font-semibold mb-4">Adicionar Motorista à Fila</h2>
+                        <div class="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 flex-wrap">
+                            <input id="nomeMotoristaInput" type="text" class="bg-gray-700 text-white rounded-md p-2" placeholder="Nome do Motorista" required>
+                            <select id="empresaSelect" class="bg-gray-700 text-white rounded-md p-2">
+                                <option>Prálog</option><option>Imediato</option><option>Hawk</option><option>Ontime</option>
+                            </select>
+                            <input id="pacotesInput" type="number" class="w-32 bg-gray-700 text-white rounded-md p-2" placeholder="Nº Pacotes" required>
+                            <button id="addMotoristaBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-transform transform hover:scale-105">Adicionar</button>
+                        </div>
+                    </div>
+                     <div class="card">
+                        <h2 class="text-xl font-semibold mb-4 border-b border-gray-700 pb-2">Filas de Espera</h2>
+                        <div id="filaContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"></div>
+                    </div>
+                    <div class="card">
+                        <h2 class="text-xl font-semibold mb-4 border-b border-gray-700 pb-2">Docas de Desembarque</h2>
+                        <div class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-4" id="docasContainer"></div>
+                    </div>
+                </div>
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="card">
+                        <h2 class="text-xl font-semibold mb-2 text-center">Volume Recebido</h2>
+                        <canvas id="volumeRecebidoChart"></canvas>
+                    </div>
+                     <div class="card">
+                        <h2 class="text-xl font-semibold mb-4">Log de Eventos</h2>
+                        <div id="logContainer" class="space-y-2 text-sm max-h-96 overflow-y-auto bg-gray-800 p-2 rounded"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="analise-duplas" class="tab-content">
+            <!-- PAINEL DE ANÁLISE DE DUPLAS (INTEGRADO) -->
+             <div class="card mb-6">
+                <h2 class="text-xl font-bold mb-4">Gerir Duplas Fixas nas Docas</h2>
+                <form id="assignFixedTeamForm" class="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-2 flex-wrap">
+                    <select id="fixedDockSelect" class="bg-gray-700 text-white rounded-md p-2 flex-grow" required></select>
+                    <input type="text" id="teamInput" placeholder="Nomes da Dupla (ex: João e Maria)" list="teams-datalist" class="bg-gray-700 text-white rounded-md p-2 flex-grow">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Atribuir / Alterar</button>
+                    <button type="button" id="removeFixedTeamBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md">Remover</button>
+                </form>
+                <datalist id="teams-datalist"></datalist>
+                 <div class="flex justify-between items-center mt-6 flex-wrap gap-4">
+                    <div>
+                        <label for="timeRange" class="font-semibold mr-2">Filtrar Período:</label>
+                        <select id="timeRange" class="bg-gray-700 text-white rounded-md p-2">
+                            <option value="all">Tudo</option><option value="today">Hoje</option><option value="yesterday">Ontem</option><option value="week">Esta Semana</option><option value="month">Este Mês</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="exportExcel" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Exportar Excel</button>
+                        <button id="clearDataBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md">Limpar Análise</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="flex flex-col lg:flex-row gap-6">
+                    <div class="flex-grow">
+                        <h2 class="text-xl font-bold mb-4">Métricas de Duplas</h2>
+                        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 text-center mb-6">
+                            <div class="kpi-card bg-gray-800 p-4 rounded-lg"><h3>Total de Pacotes</h3><p id="ad-totalPackages" class="text-3xl font-bold text-green-400">0</p></div>
+                            <div class="kpi-card bg-gray-800 p-4 rounded-lg"><h3>Total de Operações</h3><p id="ad-totalTrucks" class="text-3xl font-bold text-blue-400">0</p></div>
+                            <div class="kpi-card bg-gray-800 p-4 rounded-lg"><h3>Tempo Médio de Espera</h3><p id="ad-avgWaitTime" class="text-3xl font-bold text-yellow-400">0 min</p></div>
+                            <div class="kpi-card bg-gray-800 p-4 rounded-lg"><h3>Tempo Médio de Descarga</h3><p id="ad-avgDischargeTime" class="text-3xl font-bold text-cyan-400">0 min</p></div>
+                            <div class="kpi-card bg-gray-800 p-4 rounded-lg flex flex-col justify-center"><h3>Dupla Mais Rápida</h3><p id="ad-fastestTeam" class="text-lg font-bold">N/A</p></div>
+                            <div class="kpi-card bg-gray-800 p-4 rounded-lg flex flex-col justify-center"><h3>Dupla Mais Lenta</h3><p id="ad-slowestTeam" class="text-lg font-bold">N/A</p></div>
+                        </div>
+                    </div>
+                    <div class="lg:w-1/3">
+                        <div class="card bg-gray-800 p-4 rounded-lg h-full">
+                            <h3 class="font-semibold text-center mb-4">Conquistas do Dia</h3>
+                            <div id="achievements-list" class="space-y-3"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card bg-gray-800 p-4 rounded-lg mb-6">
+                    <h3 class="font-semibold text-center mb-2">Legenda de Duplas Ativas (com Conquistas)</h3>
+                    <div id="ad-teamLegend" class="flex flex-wrap justify-center gap-x-6 gap-y-2"></div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="card bg-gray-800 p-4 rounded-lg"><h3 class="font-bold text-center mb-2">Classificação de Eficiência (pac/h)</h3><canvas id="ad-efficiencyChart"></canvas></div>
+                    <div class="card bg-gray-800 p-4 rounded-lg"><h3 class="font-bold text-center mb-2">Giro de Doca (Veículos/Doca)</h3><canvas id="ad-giroDocaChart"></canvas></div>
+                </div>
+                 <h3 class="text-xl font-bold mt-8 mb-4">Detalhes das Operações</h3>
+                <div class="overflow-x-auto">
+                    <table id="ad-operationsTable" class="w-full text-left">
+                        <thead class="bg-gray-700"><tr><th class="p-3">Dupla</th><th class="p-3">Nomes</th><th class="p-3">Doca</th><th class="p-3">Início</th><th class="p-3">Término</th><th class="p-3">Pacotes</th><th class="p-3">T. Espera (min)</th><th class="p-3">T. Descarga (min)</th><th class="p-3">Eficiência (pac/h)</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal de Confirmação Geral -->
+    <div id="confirmModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-800 p-6 rounded-lg text-white text-center w-full max-w-sm">
+            <h4 class="text-lg font-bold mb-2">Confirmar Ação</h4><p id="confirmModalText" class="mb-4"></p>
+            <div class="flex justify-center gap-4">
+                <button id="confirmBtn" class="bg-red-600 hover:bg-red-700 font-bold py-2 px-4 rounded">Sim, Tenho Certeza</button>
+                <button id="cancelBtn" class="bg-gray-600 hover:bg-gray-700 font-bold py-2 px-4 rounded">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para Docar Carreta -->
+    <div id="carretaModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-800 p-6 rounded-lg text-white w-full max-w-sm">
+            <h4 class="text-lg font-bold mb-4">Ocupar Doca com Carreta</h4>
+            <p class="text-sm text-gray-400 mb-4">Selecione uma doca livre para ocupar manualmente com uma carreta.</p>
+            <select id="carretaDockSelect" class="w-full bg-gray-700 text-white rounded-md p-2 mb-4"></select>
+            <div class="flex justify-center gap-4">
+                <button id="confirmCarretaBtn" class="bg-blue-600 hover:bg-blue-700 font-bold py-2 px-4 rounded">Confirmar</button>
+                <button id="cancelCarretaBtn" class="bg-gray-600 hover:bg-gray-700 font-bold py-2 px-4 rounded">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para Senha do Motorista -->
+    <div id="senhaModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-800 p-8 rounded-lg text-white text-center w-full max-w-sm">
+            <h4 class="text-2xl font-bold mb-4">Registro Concluído!</h4>
+            <p class="text-lg mb-2">Motorista: <strong id="senhaMotoristaNome" class="text-cyan-400"></strong></p>
+            <p class="text-lg mb-6">A sua senha é a posição:</p>
+            <div class="bg-blue-600 text-white font-bold text-6xl rounded-lg p-4 mb-6">
+                <span id="senhaPosicao"></span>
+            </div>
+            <p class="text-sm text-gray-400 mb-6">Por favor, tire um print desta tela e aguarde ser chamado.</p>
+            <button id="fecharSenhaModalBtn" class="bg-gray-600 hover:bg-gray-700 font-bold py-2 px-6 rounded w-full">OK</button>
+        </div>
+    </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- LÓGICA DE NAVEGAÇÃO POR ABAS ---
+    const tabs = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(item => item.classList.remove('active'));
+            tab.classList.add('active');
+            const target = document.getElementById(tab.dataset.tab);
+            tabContents.forEach(content => content.classList.remove('active'));
+            target.classList.add('active');
+        });
+    });
+
+    // =================================================================
+    // APLICAÇÃO INTEGRADA
+    // =================================================================
+    const integratedApp = (() => {
+        // --- ESTADO UNIFICADO DA APLICAÇÃO ---
+        let state = {
+            filaDeEspera: [],
+            docas: [],
+            totalPacotesMeta: 5000,
+            operacaoIniciada: false,
+            historicoEntradas: {},
+            pacotesDescarregadosTotal: 0,
+            logEventos: [],
+            analiseDuplasData: [],
+            teamColors: {},
+            teamAchievements: {}, 
+            nextColorIndex: 0
+        };
+        const PREDEFINED_COLORS = ['#3498db', '#2ecc71', '#e74c3c', '#9b59b6', '#f1c40f', '#1abc9c', '#e67e22', '#34495e', '#7f8c8d', '#d35400'];
+        let charts = {};
+
+        const ACHIEVEMENTS = {
+            speed_king: { icon: '⚡', title: 'Rei da Velocidade (Descarga < 45 min)' },
+            marathon_runner: { icon: '🏃‍♂️', title: 'Maratonista (5+ operações no dia)' },
+            the_wall: { icon: '🧱', title: 'Muralha (8.000+ pacotes no dia)' },
+            peak_performer: { icon: '🚀', title: 'Produtividade Máxima (Eficiência > 1200 pac/h)' }
+        };
+
+        // --- PERSISTÊNCIA DE DADOS ---
+        const salvarEstado = () => localStorage.setItem('integratedDockData', JSON.stringify(state));
+        const carregarEstado = () => {
+            const savedState = localStorage.getItem('integratedDockData');
+            if (savedState) {
+                state = JSON.parse(savedState);
+                 if (!state.teamAchievements) state.teamAchievements = {}; 
+            } else {
+                state.docas = Array(12).fill(null).map((_, i) => ({ id: i + 1, status: 'livre', motorista: null, duplaFixa: null }));
+            }
+        };
+
+        // --- LÓGICA DE GESTÃO DE DOCAS ---
+        const adicionarLog = (tipo, mensagem) => {
+            state.logEventos.unshift({ tipo, mensagem, hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) });
+            if (state.logEventos.length > 20) state.logEventos.pop();
+        };
+
+        const chamarProximoMotorista = (docaEspecifica = null) => {
+            if (!state.operacaoIniciada || state.filaDeEspera.length === 0) return;
+            const docaLivre = docaEspecifica ? docaEspecifica : state.docas.find(d => d.status === 'livre');
+            if (docaLivre) {
+                const proximoMotorista = state.filaDeEspera.shift();
+                docaLivre.status = 'chamado';
+                docaLivre.motorista = proximoMotorista;
+                if (docaLivre.duplaFixa) {
+                    docaLivre.motorista.dupla = docaLivre.duplaFixa;
+                    adicionarLog('chamada', `Motorista ${proximoMotorista.nome} chamado para a Doca ${docaLivre.id} (Dupla: ${docaLivre.duplaFixa}).`);
+                } else {
+                    adicionarLog('chamada', `Motorista ${proximoMotorista.nome} chamado para a Doca ${docaLivre.id}.`);
+                }
+                atualizarTodasAsUIs();
+            }
+        };
+        
+        const chamarTodosPossiveis = () => {
+            if (!state.operacaoIniciada || state.filaDeEspera.length === 0) return;
+            const docasLivres = state.docas.filter(d => d.status === 'livre');
+            docasLivres.forEach(doca => chamarProximoMotorista(doca));
+        };
+
+        const iniciarDescarga = (docaId) => {
+            const doca = state.docas.find(d => d.id === docaId);
+            if (doca && doca.status === 'chamado') {
+                doca.status = 'ocupada';
+                doca.motorista.horaInicio = new Date().toISOString();
+                adicionarLog('sistema', `Descarga iniciada na Doca ${doca.id}.`);
+                atualizarTodasAsUIs();
+            }
+        };
+
+        const finalizarDescarga = (docaId) => {
+            const doca = state.docas.find(d => d.id === docaId);
+            if (doca && doca.status === 'ocupada') {
+                const motoristaFinalizado = doca.motorista;
+                const endTime = new Date();
+                state.pacotesDescarregadosTotal += motoristaFinalizado.pacotes;
+                
+                if (motoristaFinalizado.dupla) {
+                    const waitTime = (new Date(motoristaFinalizado.horaInicio) - new Date(motoristaFinalizado.queueEntryTime)) / 60000;
+                    const newRecord = { id: Date.now(), team: motoristaFinalizado.dupla, startTime: motoristaFinalizado.horaInicio, endTime: endTime.toISOString(), packages: motoristaFinalizado.pacotes, docaId: doca.id, waitTime: waitTime };
+                    state.analiseDuplasData.push(newRecord);
+                    getColorForTeam(motoristaFinalizado.dupla);
+                    checkAchievements(motoristaFinalizado.dupla, newRecord);
+                    adicionarLog('finalizacao', `Descarga da dupla ${motoristaFinalizado.dupla} finalizada na Doca ${doca.id}.`);
+                } else {
+                    adicionarLog('finalizacao', `Descarga finalizada por ${motoristaFinalizado.nome} (sem dupla) na Doca ${doca.id}.`);
+                }
+
+                doca.status = 'livre';
+                doca.motorista = null;
+                atualizarTodasAsUIs();
+                chamarProximoMotorista(doca);
+            }
+        };
+
+        const ocuparComCarreta = (docaId) => {
+            const doca = state.docas.find(d => d.id === docaId);
+            if (doca && doca.status === 'livre') {
+                doca.status = 'carreta_manual';
+                adicionarLog('sistema', `Doca ${doca.id} ocupada manualmente por uma Carreta.`);
+                atualizarTodasAsUIs();
+            }
+        };
+
+        const finalizarCarretaManual = (docaId) => {
+            const doca = state.docas.find(d => d.id === docaId);
+            if (doca && doca.status === 'carreta_manual') {
+                doca.status = 'livre';
+                adicionarLog('finalizacao', `Carreta finalizada e liberada da Doca ${doca.id}.`);
+                atualizarTodasAsUIs();
+                chamarProximoMotorista(doca);
+            }
+        };
+
+        const atribuirDuplaFixa = (docaId, nomeDupla) => {
+            const doca = state.docas.find(d => d.id === docaId);
+            if(doca) {
+                doca.duplaFixa = nomeDupla;
+                adicionarLog('sistema', `Dupla ${nomeDupla} atribuída permanentemente à Doca ${docaId}.`);
+                atualizarTodasAsUIs();
+            }
+        };
+
+        const removerDuplaFixa = (docaId) => {
+            const doca = state.docas.find(d => d.id === docaId);
+            if(doca && doca.duplaFixa) {
+                adicionarLog('sistema', `Dupla ${doca.duplaFixa} removida da Doca ${docaId}.`);
+                doca.duplaFixa = null;
+                atualizarTodasAsUIs();
+            }
+        };
+
+        const resetDockManagement = () => {
+            state.filaDeEspera = [];
+            state.operacaoIniciada = false;
+            state.pacotesDescarregadosTotal = 0;
+            state.logEventos = [];
+            state.docas.forEach(doca => {
+                doca.status = 'livre';
+                doca.motorista = null;
+            });
+            state.teamAchievements = {};
+            adicionarLog('sistema', 'Operação do dia reiniciada.');
+            atualizarTodasAsUIs();
+        };
+
+        // --- LÓGICA DE ANÁLISE E CONQUISTAS ---
+        const checkAchievements = (teamName, lastOperation) => {
+            if (!state.teamAchievements[teamName]) {
+                state.teamAchievements[teamName] = [];
+            }
+            const achievements = state.teamAchievements[teamName];
+            
+            const today = new Date().toDateString();
+            const teamOpsToday = state.analiseDuplasData.filter(op => 
+                op.team === teamName && new Date(op.startTime).toDateString() === today
+            );
+
+            const dischargeTime = (new Date(lastOperation.endTime) - new Date(lastOperation.startTime)) / 60000;
+            if (dischargeTime < 45 && !achievements.includes('speed_king')) {
+                achievements.push('speed_king');
+            }
+
+            if (teamOpsToday.length >= 5 && !achievements.includes('marathon_runner')) {
+                achievements.push('marathon_runner');
+            }
+
+            const totalPackagesToday = teamOpsToday.reduce((sum, op) => sum + op.packages, 0);
+            if (totalPackagesToday >= 8000 && !achievements.includes('the_wall')) {
+                achievements.push('the_wall');
+            }
+
+            const efficiency = dischargeTime > 0 ? (lastOperation.packages / (dischargeTime / 60)) : 0;
+            if (efficiency > 1200 && !achievements.includes('peak_performer')) {
+                achievements.push('peak_performer');
+            }
+        };
+
+        const getTeamInitials = (teamName) => {
+            if (!teamName || typeof teamName !== 'string') return '';
+            const names = teamName.replace(/&/g, 'e').split('e').map(n => n.trim());
+            if (names.length > 1 && names[0] && names[1]) return `${names[0][0]}${names[1][0]}`.toUpperCase();
+            if (names.length === 1 && names[0].includes(' ')) { const parts = names[0].split(' '); return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase(); }
+            return teamName.slice(0, 2).toUpperCase();
+        };
+
+        const getColorForTeam = (teamName) => {
+            if (!state.teamColors[teamName]) {
+                state.teamColors[teamName] = PREDEFINED_COLORS[state.nextColorIndex % PREDEFINED_COLORS.length];
+                state.nextColorIndex++;
+            }
+            return state.teamColors[teamName];
+        };
+        
+        // --- FUNÇÕES DE RENDERIZAÇÃO ---
+        const atualizarTodasAsUIs = () => {
+            salvarEstado();
+            renderGestaoDocas();
+            renderAnaliseDuplas();
+        };
+        
+        const renderGestaoDocas = () => {
+            document.getElementById('caminhoesEspera').textContent = state.filaDeEspera.length;
+            document.getElementById('docasOcupadas').textContent = state.docas.filter(d => d.status !== 'livre').length;
+            document.getElementById('pacotesDescarregados').textContent = state.pacotesDescarregadosTotal;
+            
+            const toggleBtn = document.getElementById('toggleQueueBtn');
+            if (state.operacaoIniciada) {
+                toggleBtn.innerHTML = '<i class="fas fa-pause mr-2"></i> Pausar Fila Automática';
+                toggleBtn.className = 'bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-md transition-colors';
+            } else {
+                toggleBtn.innerHTML = '<i class="fas fa-play mr-2"></i> Ativar Fila Automática';
+                toggleBtn.className = 'bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-md transition-colors';
+            }
+            
+            const carretaBtn = document.getElementById('showCarretaModalBtn');
+            const vacantDocks = state.docas.filter(d => d.status === 'livre');
+            carretaBtn.disabled = vacantDocks.length === 0;
+            carretaBtn.classList.toggle('opacity-50', vacantDocks.length === 0);
+            carretaBtn.classList.toggle('cursor-not-allowed', vacantDocks.length === 0);
+
+            const filaContainer = document.getElementById('filaContainer');
+            filaContainer.innerHTML = '';
+            const empresas = ['Prálog', 'Imediato', 'Hawk', 'Ontime'];
+            if(state.filaDeEspera.length === 0){
+                filaContainer.innerHTML = '<p class="text-gray-500 text-center col-span-2">Nenhum motorista na fila.</p>';
+            } else {
+                 empresas.forEach(empresa => {
+                    const motoristasDaEmpresa = state.filaDeEspera.filter(m => m.empresa === empresa);
+                    if(motoristasDaEmpresa.length > 0) {
+                        const empresaCard = document.createElement('div');
+                        empresaCard.className = 'bg-gray-800 p-4 rounded-lg';
+                        let motoristasHtml = motoristasDaEmpresa.map((motorista) => {
+                            const posGlobal = state.filaDeEspera.findIndex(m => m.id === motorista.id) + 1;
+                            return `<li class="text-sm flex justify-between items-center py-1"><span><span class="font-bold text-gray-400 w-6 inline-block">${posGlobal}º</span> ${motorista.nome}</span><span class="text-xs font-mono bg-gray-700 px-2 py-1 rounded">${motorista.pacotes}</span></li>`;
+                        }).join('');
+                        empresaCard.innerHTML = `<h3 class="font-semibold text-center text-lg mb-2 text-gray-300">${empresa}</h3><ul class="space-y-2">${motoristasHtml}</ul>`;
+                        filaContainer.appendChild(empresaCard);
+                    }
+                });
+            }
+            const docasContainer = document.getElementById('docasContainer');
+            docasContainer.innerHTML = '';
+            state.docas.forEach(doca => {
+                const docaCard = document.createElement('div');
+                let contentHtml = '';
+                const duplaFixaHtml = doca.duplaFixa ? `<p class="text-xs font-bold text-gray-400 mt-1">Dupla: ${doca.duplaFixa}</p>` : '';
+                
+                if (doca.status === 'livre') {
+                    docaCard.className = 'bg-gray-800 p-4 rounded-lg text-center text-gray-500 flex flex-col justify-center items-center min-h-[160px]';
+                    contentHtml = `<i class="fa-solid fa-dolly text-4xl mb-2"></i><p class="font-semibold">Vaga</p><p class="text-sm">Doca ${doca.id}</p>${duplaFixaHtml}`;
+                } else if (doca.status === 'carreta_manual') {
+                     docaCard.className = 'bg-gray-800 p-4 rounded-lg text-center text-red-400 flex flex-col justify-center items-center min-h-[160px]';
+                     contentHtml = `<p class="text-xs font-bold text-red-400 mb-1">CARRETA</p><i class="fa-solid fa-truck-moving text-4xl mb-2"></i><p class="font-bold">Ocupada Manualmente</p><p class="text-sm text-gray-300">Doca ${doca.id}</p><div class="mt-2"><button class="btn-sm bg-red-600 hover:bg-red-700 rounded text-white" onclick="app.finalizarCarreta(${doca.id})">Finalizar</button></div>`;
+                } else {
+                    const motorista = doca.motorista;
+                    let timerHtml = '';
+                    if (doca.status === 'ocupada') {
+                        const tempoDecorrido = (Date.now() - new Date(motorista.horaInicio).getTime()) / 1000;
+                        const [h, m, s] = [Math.floor(tempoDecorrido / 3600), Math.floor((tempoDecorrido % 3600) / 60), Math.floor(tempoDecorrido % 60)].map(v => String(v).padStart(2, '0'));
+                        timerHtml = `<p class="text-lg text-yellow-400 font-mono mt-1 timer">${h}:${m}:${s}</p>`;
+                    }
+                    const duplaOperacaoHtml = motorista.dupla ? `<p class="text-xs font-bold text-cyan-400 mt-1">${motorista.dupla}</p>` : '';
+                    docaCard.className = 'bg-gray-800 p-4 rounded-lg text-center text-blue-400 flex flex-col justify-center items-center min-h-[160px]';
+                    docaCard.id = `doca-${doca.id}`;
+                    contentHtml = `<i class="fa-solid fa-truck-ramp-box text-4xl mb-2"></i><p class="font-bold">${motorista.nome}</p>${duplaOperacaoHtml}<p class="text-sm text-gray-300">Doca ${doca.id}</p>${timerHtml}<div class="mt-2 flex gap-2">${doca.status === 'chamado' ? `<button class="btn-sm bg-green-600 hover:bg-green-700 rounded text-white" onclick="app.iniciar(${doca.id})">Iniciar</button>` : ''}${doca.status === 'ocupada' ? `<button class="btn-sm bg-red-600 hover:bg-red-700 rounded text-white" onclick="app.finalizar(${doca.id})">Finalizar</button>` : ''}</div>`;
+                }
+                docaCard.innerHTML = contentHtml;
+                docasContainer.appendChild(docaCard);
+            });
+            const logContainer = document.getElementById('logContainer');
+            logContainer.innerHTML = state.logEventos.map(item => `<div class="flex items-start"><i class="fas fa-info-circle text-gray-500 mr-3 mt-1"></i><div><span class="font-bold text-gray-400">${item.hora}</span>: ${item.mensagem}</div></div>`).join('') || '<p class="text-gray-500">Aguardando eventos...</p>';
+            
+            const pacotesNaFila = state.filaDeEspera.reduce((acc, m) => acc + m.pacotes, 0);
+            
+            charts.volumeRecebido.data.datasets[0].data = [state.pacotesDescarregadosTotal, pacotesNaFila];
+            charts.volumeRecebido.update();
+        };
+
+        const renderAnaliseDuplas = () => {
+            const filterValue = document.getElementById('timeRange').value;
+            const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            let startDate, endDate;
+            let filteredOperationsData = [];
+            switch(filterValue) {
+                case 'today': startDate = today; endDate = new Date(today.getTime() + 864e5); break;
+                case 'yesterday': endDate = today; startDate = new Date(today.getTime() - 864e5); break;
+                case 'week': startDate = new Date(today); startDate.setDate(startDate.getDate() - now.getDay()); endDate = new Date(now.getTime() + 864e5); break;
+                case 'month': startDate = new Date(now.getFullYear(), now.getMonth(), 1); endDate = new Date(now.getTime() + 864e5); break;
+                default: filteredOperationsData = [...state.analiseDuplasData]; break;
+            }
+            if(filterValue !== 'all') {
+                filteredOperationsData = state.analiseDuplasData.filter(op => { const opDate = new Date(op.startTime); return opDate >= startDate && opDate < endDate; });
+            }
+
+            const fixedDockSelect = document.getElementById('fixedDockSelect');
+            const docasLivres = state.docas.filter(d => !d.duplaFixa);
+            const docasOcupadas = state.docas.filter(d => d.duplaFixa);
+            let html = '';
+            if (docasLivres.length > 0) {
+                html += '<optgroup label="Docas Livres para Atribuir">';
+                html += docasLivres.map(d => `<option value="${d.id}">Doca ${d.id}</option>`).join('');
+                html += '</optgroup>';
+            }
+            if (docasOcupadas.length > 0) {
+                html += '<optgroup label="Docas com Dupla Atribuída">';
+                html += docasOcupadas.map(d => `<option value="${d.id}">Doca ${d.id} (${d.duplaFixa})</option>`).join('');
+                html += '</optgroup>';
+            }
+            if (!html) {
+                html = '<option value="">Nenhuma doca disponível</option>';
+            }
+            fixedDockSelect.innerHTML = html;
+
+
+            const teams = [...new Set(filteredOperationsData.map(op => op.team))];
+            const metrics = {};
+            teams.forEach(team => {
+                const teamData = filteredOperationsData.filter(op => op.team === team);
+                metrics[team] = {
+                    totalPackages: teamData.reduce((s, o) => s + o.packages, 0),
+                    totalTrucks: teamData.length,
+                    totalHours: teamData.reduce((s, o) => s + ((new Date(o.endTime) - new Date(o.startTime)) / 36e5), 0),
+                    get avg() { return this.totalHours > 0 ? this.totalPackages / this.totalHours : 0 }
+                };
+            });
+            
+            const teamsArray = Object.entries(metrics);
+            document.getElementById('ad-totalPackages').textContent = teamsArray.reduce((s, [,m]) => s + m.totalPackages, 0).toLocaleString('pt-BR');
+            document.getElementById('ad-totalTrucks').textContent = teamsArray.reduce((s, [,m]) => s + m.totalTrucks, 0);
+
+            const totalWaitTime = filteredOperationsData.reduce((acc, op) => acc + (op.waitTime || 0), 0);
+            const avgWaitTime = filteredOperationsData.length > 0 ? (totalWaitTime / filteredOperationsData.length).toFixed(1) : 0;
+            document.getElementById('ad-avgWaitTime').textContent = `${avgWaitTime} min`;
+
+            const totalDischargeTime = filteredOperationsData.reduce((acc, op) => acc + (new Date(op.endTime) - new Date(op.startTime)), 0);
+            const avgDischargeTime = filteredOperationsData.length > 0 ? ((totalDischargeTime / filteredOperationsData.length) / 60000).toFixed(1) : 0;
+            document.getElementById('ad-avgDischargeTime').textContent = `${avgDischargeTime} min`;
+
+
+            if (teamsArray.length < 1) {
+                document.getElementById('ad-fastestTeam').innerHTML = '<span>N/A</span>';
+                document.getElementById('ad-slowestTeam').innerHTML = '<span>N/A</span>';
+            } else {
+                const sortedBySpeed = teamsArray.sort((a, b) => b[1].avg - a[1].avg);
+                document.getElementById('ad-fastestTeam').innerHTML = `<span class="text-green-400">▲</span> ${sortedBySpeed[0][0]} (${sortedBySpeed[0][1].avg.toFixed(1)} pac/h)`;
+                document.getElementById('ad-slowestTeam').innerHTML = `<span class="text-red-400">▼</span> ${sortedBySpeed[sortedBySpeed.length - 1][0]} (${sortedBySpeed[sortedBySpeed.length - 1][1].avg.toFixed(1)} pac/h)`;
+            }
+
+            const teamInitials = teams.map(t => getTeamInitials(t));
+            const colors = teams.map(team => getColorForTeam(team));
+            
+            const efficiencyData = Object.entries(metrics).sort(([, a], [, b]) => b.avg - a.avg);
+            const efficiencyLabels = efficiencyData.map(([team]) => getTeamInitials(team));
+            const efficiencyValues = efficiencyData.map(([, data]) => data.avg);
+            const efficiencyColors = efficiencyData.map(([team]) => getColorForTeam(team));
+            charts.efficiency.data.labels = efficiencyLabels;
+            charts.efficiency.data.datasets[0].data = efficiencyValues;
+            charts.efficiency.data.datasets[0].backgroundColor = efficiencyColors;
+            charts.efficiency.update();
+
+            const giroDoca = {};
+            state.docas.forEach(d => giroDoca[d.id] = 0);
+            filteredOperationsData.forEach(op => {
+                if(giroDoca[op.docaId] !== undefined) giroDoca[op.docaId]++;
+            });
+            charts.giroDoca.data.labels = Object.keys(giroDoca).map(id => `Doca ${id}`);
+            charts.giroDoca.data.datasets[0].data = Object.values(giroDoca);
+            charts.giroDoca.update();
+            
+            const legend = document.getElementById('ad-teamLegend');
+            if (teams.length === 0) { legend.innerHTML = `<p class="text-gray-500">Nenhuma dupla ativa no período.</p>`; }
+            else { 
+                legend.innerHTML = teams.map(team => {
+                    const teamAchievements = state.teamAchievements[team] || [];
+                    const iconsHtml = teamAchievements.map(achId => `<span title="${ACHIEVEMENTS[achId].title}">${ACHIEVEMENTS[achId].icon}</span>`).join(' ');
+                    return `<div class="flex items-center gap-2"><div class="w-4 h-4 rounded" style="background-color: ${getColorForTeam(team)};"></div><span><strong>${getTeamInitials(team)}:</strong> ${team}</span><div class="flex gap-1">${iconsHtml}</div></div>`
+                }).join('');
+            }
+            
+            document.getElementById('achievements-list').innerHTML = Object.entries(ACHIEVEMENTS).map(([, ach]) => `<div class="flex items-center text-sm"><span class="text-2xl mr-3">${ach.icon}</span><span>${ach.title}</span></div>`).join('');
+
+            const tbody = document.querySelector('#ad-operationsTable tbody');
+            tbody.innerHTML = '';
+            if (filteredOperationsData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center p-4 text-gray-500">Nenhuma operação encontrada.</td></tr>`;
+            } else {
+                filteredOperationsData.sort((a,b) => new Date(b.startTime) - new Date(a.startTime)).forEach(op => {
+                    const start = new Date(op.startTime); const end = new Date(op.endTime);
+                    const dur = (end - start) / 36e5; const eff = dur > 0 ? op.packages / dur : 0;
+                    tbody.innerHTML += `<tr class="border-b border-gray-700 hover:bg-gray-600">
+                        <td class="p-3 font-bold">${getTeamInitials(op.team)}</td>
+                        <td class="p-3">${op.team}</td>
+                        <td class="p-3">Doca ${op.docaId}</td>
+                        <td class="p-3">${start.toLocaleString('pt-BR')}</td><td class="p-3">${end.toLocaleString('pt-BR')}</td>
+                        <td class="p-3">${op.packages.toLocaleString('pt-BR')}</td><td class="p-3">${(op.waitTime || 0).toFixed(1)}</td>
+                        <td class="p-3">${(dur * 60).toFixed(1)}</td><td class="p-3">${eff.toFixed(1)}</td></tr>`;
+                });
+            }
+            
+            const datalist = document.getElementById('teams-datalist');
+            datalist.innerHTML = [...new Set(state.analiseDuplasData.map(op => op.team))].map(team => `<option value="${team}"></option>`).join('');
+        };
+        
+        // --- INICIALIZAÇÃO GERAL ---
+        const init = () => {
+            carregarEstado();
+            
+            const chartOptions = { plugins: { legend: { display: false, labels: { color: '#e2e8f0' }}}, scales: { x: { ticks: { color: 'white' }, grid: { color: '#4a5568' } }, y: { beginAtZero: true, ticks: { color: 'white' }, grid: { color: '#4a5568' } } } };
+            const efficiencyChartOptions = { indexAxis: 'y', ...chartOptions };
+            const doughnutOptions = { plugins: { legend: { position: 'bottom', labels: { color: '#e2e8f0' }}}, cutout: '60%' };
+
+            charts.volumeRecebido = new Chart(document.getElementById('volumeRecebidoChart').getContext('2d'), { type: 'doughnut', data: { labels: ['Descarregado', 'Em Fila'], datasets: [{ data: [], backgroundColor: ['#27ae60', '#f1c40f'] }] }, options: doughnutOptions });
+            charts.efficiency = new Chart(document.getElementById('ad-efficiencyChart').getContext('2d'), { type: 'bar', data: { labels: [], datasets: [{}] }, options: efficiencyChartOptions });
+            charts.giroDoca = new Chart(document.getElementById('ad-giroDocaChart').getContext('2d'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: '#63b3ed' }] }, options: chartOptions });
+            
+            document.getElementById('toggleQueueBtn').addEventListener('click', () => {
+                state.operacaoIniciada = !state.operacaoIniciada;
+                if (state.operacaoIniciada) {
+                    adicionarLog('sistema', 'Fila automática ATIVADA.');
+                    chamarTodosPossiveis();
+                } else {
+                    adicionarLog('sistema', 'Fila automática PAUSADA.');
+                }
+                atualizarTodasAsUIs();
+            });
+
+            document.getElementById('showCarretaModalBtn').addEventListener('click', () => {
+                const carretaDockSelect = document.getElementById('carretaDockSelect');
+                const vacantDocks = state.docas.filter(d => d.status === 'livre');
+                carretaDockSelect.innerHTML = vacantDocks.length > 0 ? vacantDocks.map(d => `<option value="${d.id}">Doca ${d.id}</option>`).join('') : '<option value="">Nenhuma doca livre</option>';
+                document.getElementById('carretaModal').classList.remove('hidden');
+            });
+            document.getElementById('cancelCarretaBtn').addEventListener('click', () => document.getElementById('carretaModal').classList.add('hidden'));
+            document.getElementById('confirmCarretaBtn').addEventListener('click', () => {
+                const docaId = parseInt(document.getElementById('carretaDockSelect').value);
+                if (docaId) {
+                    ocuparComCarreta(docaId);
+                    document.getElementById('carretaModal').classList.add('hidden');
+                }
+            });
+
+            document.getElementById('addMotoristaBtn').addEventListener('click', () => {
+                const nomeInput = document.getElementById('nomeMotoristaInput');
+                const pacotesInput = document.getElementById('pacotesInput');
+                const nome = nomeInput.value.trim();
+                const pacotes = parseInt(pacotesInput.value);
+                if (nome && pacotes > 0) {
+                    const posicao = state.filaDeEspera.length + 1;
+                    state.filaDeEspera.push({ id: Date.now(), nome, empresa: document.getElementById('empresaSelect').value, pacotes, queueEntryTime: new Date().toISOString() });
+                    
+                    document.getElementById('senhaMotoristaNome').textContent = nome;
+                    document.getElementById('senhaPosicao').textContent = posicao;
+                    document.getElementById('senhaModal').classList.remove('hidden');
+
+                    adicionarLog('registro', `Motorista ${nome} entrou na fila com ${pacotes} pacotes. Posição: ${posicao}`);
+                    nomeInput.value = ''; pacotesInput.value = '';
+                    atualizarTodasAsUIs();
+                    chamarProximoMotorista();
+                } else { alert('Por favor, preencha o nome e um número de pacotes válido.'); }
+            });
+
+            document.getElementById('fecharSenhaModalBtn').addEventListener('click', () => {
+                document.getElementById('senhaModal').classList.add('hidden');
+            });
+
+            document.getElementById('assignFixedTeamForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const docaId = parseInt(document.getElementById('fixedDockSelect').value);
+                const teamName = document.getElementById('teamInput').value.trim();
+                if(docaId && teamName) {
+                    atribuirDuplaFixa(docaId, teamName);
+                    document.getElementById('teamInput').value = '';
+                } else {
+                    alert('Por favor, selecione uma doca e insira o nome da dupla.');
+                }
+            });
+             document.getElementById('removeFixedTeamBtn').addEventListener('click', () => {
+                const docaId = parseInt(document.getElementById('fixedDockSelect').value);
+                 if(docaId) {
+                    removerDuplaFixa(docaId);
+                } else {
+                    alert('Por favor, selecione uma doca para remover a atribuição.');
+                }
+            });
+
+            document.getElementById('fixedDockSelect').addEventListener('change', (e) => {
+                const docaId = parseInt(e.target.value);
+                const teamInput = document.getElementById('teamInput');
+                if (docaId) {
+                    const doca = state.docas.find(d => d.id === docaId);
+                    if (doca && doca.duplaFixa) {
+                        teamInput.value = doca.duplaFixa;
+                    } else {
+                        teamInput.value = '';
+                    }
+                }
+            });
+
+            document.getElementById('timeRange').addEventListener('change', renderAnaliseDuplas);
+             document.getElementById('exportExcel').addEventListener('click', () => {
+                const data = state.analiseDuplasData.map(op => ({'Iniciais': getTeamInitials(op.team),'Dupla': op.team, 'Doca': op.docaId,'Início': new Date(op.startTime).toLocaleString('pt-BR'),'Término': new Date(op.endTime).toLocaleString('pt-BR'),'Pacotes': op.packages,'T. Espera (min)': (op.waitTime || 0).toFixed(1), 'T. Descarga (min)': (((new Date(op.endTime) - new Date(op.startTime)) / 60000)).toFixed(1) }));
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Operações de Duplas');
+                XLSX.writeFile(wb, 'analise_duplas.xlsx');
+            });
+            document.getElementById('clearDataBtn').addEventListener('click', () => {
+                showConfirmModal('Tem a certeza de que deseja apagar todos os dados da Análise de Duplas?', () => {
+                    state.analiseDuplasData = []; state.teamColors = {}; state.nextColorIndex = 0;
+                    atualizarTodasAsUIs();
+                });
+            });
+
+             document.getElementById('resetDockManagementBtn').addEventListener('click', () => {
+                showConfirmModal('Tem a certeza de que deseja limpar todos os dados da Gestão de Docas (fila e docas ocupadas)? As duplas fixas e os dados de análise não serão afetados.', () => {
+                    resetDockManagement();
+                });
+            });
+            
+            atualizarTodasAsUIs();
+            setInterval(() => {
+                 state.docas.forEach(doca => {
+                    if (doca.status === 'ocupada') {
+                        const timerEl = document.querySelector(`#doca-${doca.id} .timer`);
+                        if(timerEl) {
+                             const tempoDecorrido = (Date.now() - new Date(doca.motorista.horaInicio).getTime()) / 1000;
+                             const [h, m, s] = [Math.floor(tempoDecorrido / 3600), Math.floor((tempoDecorrido % 3600) / 60), Math.floor(tempoDecorrido % 60)].map(v => String(v).padStart(2, '0'));
+                             timerEl.textContent = `${h}:${m}:${s}`;
+                        }
+                    }
+                });
+            }, 1000);
+
+            const showConfirmModal = (text, onConfirm) => {
+                const modal = document.getElementById('confirmModal');
+                document.getElementById('confirmModalText').textContent = text;
+                modal.classList.remove('hidden');
+                const confirmHandler = () => { onConfirm(); cleanup(); };
+                const cancelHandler = () => cleanup();
+                const cleanup = () => {
+                    modal.classList.add('hidden');
+                    confirmBtn.removeEventListener('click', confirmHandler);
+                    cancelBtn.removeEventListener('click', cancelHandler);
+                };
+                const confirmBtn = document.getElementById('confirmBtn');
+                const cancelBtn = document.getElementById('cancelBtn');
+                confirmBtn.addEventListener('click', confirmHandler);
+                cancelBtn.addEventListener('click', cancelHandler);
+            };
+
+            window.app = { iniciar: iniciarDescarga, finalizar: finalizarDescarga, ocuparCarreta: ocuparComCarreta, finalizarCarreta: finalizarCarretaManual };
+        };
+
+        return { init };
+    })();
+
+    integratedApp.init();
+
+});
+</script>
+</body>
+</html>
+
