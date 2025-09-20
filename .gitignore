@@ -1,11 +1,4 @@
-Ficheiros e pastas do sistema operativo
-.DS_Store
-Thumbs.db
+# Dependency directories
+node_modules/
 
-Ficheiros de configuração de editores de código
-.vscode/
-.idea/
-
-Ficheiros de log ou temporários
-*.log
-*.tmp
+.idea

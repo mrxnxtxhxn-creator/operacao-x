@@ -1,52 +1,45 @@
-# operacao-x
-Painel de Gestão e Análise de Docas
-Este projeto é um sistema web completo e autónomo para a gestão e automação do fluxo de descarga de camiões num centro de distribuição. A aplicação é executada inteiramente no navegador (frontend-only) e utiliza o localStorage para persistência de dados, o que significa que toda a informação é guardada no computador do utilizador.
+## Deploy JSON Server to Vercel
 
-O painel está dividido em duas secções principais, acessíveis por abas: Gestão de Docas e Análise de Duplas.
+A template to deploy [JSON Server](https://github.com/typicode/json-server) to [Vercel](https://vercel.com), allow you to run fake REST API online!
 
-✨ Funcionalidades Principais
-Gestão de Docas
-Fila de Espera Automática: Adicione motoristas à fila e ative o sistema para chamar automaticamente o próximo veículo para a primeira doca livre.
+Demo from this repository: 
 
-Gestão de Carretas: Ocupe docas manualmente com carretas, que operam fora do fluxo da fila automática.
+1. https://json-server-in.vercel.app
+2. https://json-server-in.vercel.app/api/posts
 
-Visualização em Tempo Real: Acompanhe o status de 12 docas (Vaga, Chamado, Ocupada, Carreta), os temporizadores de descarga e a fila de espera, tudo atualizado a cada segundo.
+![Powered by Vercel](https://images.ctfassets.net/e5382hct74si/78Olo8EZRdUlcDUFQvnzG7/fa4cdb6dc04c40fceac194134788a0e2/1618983297-powered-by-vercel.svg)
 
-Log de Eventos: Um registo cronológico de todas as ações importantes (entradas na fila, chamadas, finalizações).
+### How to use
 
-Senha para Motoristas: Ao adicionar um motorista, é gerada uma "senha" (a sua posição na fila) para que ele possa tirar um print e aguardar a sua vez.
+1. Click "**Use this template**" or clone this repository.
+2. Update or use the default [`db.json`](./db.json) in the repository.
+3. Sign Up or login into [Vercel](https://vercel.com).
+4. From the Vercel dashboard, click "**+ New Project**" then "**Import**" your repository.
+5. In the "**Configure Project**" screen, leave everything default and click "**Deploy**".
+6. Wait until deployment is done, and your own JSON server is ready to serve!
 
-Análise de Duplas
-Atribuição de Duplas Fixas: Atribua duplas a docas específicas para todo o expediente. O sistema associa-as automaticamente a cada nova operação naquela doca.
+## Default `db.json`
 
-KPIs de Desempenho: Acompanhe métricas cruciais como Tempo Médio de Espera, Tempo Médio de Descarga e a Dupla Mais Rápida/Lenta.
+```json
+{
+  "posts": [
+    { "id": 1, "title": "json-server", "author": "typicode" }
+  ],
+  "comments": [
+    { "id": 1, "body": "some comment", "postId": 1 }
+  ],
+  "profile": { "name": "typicode" }
+}
+```
 
-Gamificação e Conquistas: Um sistema de conquistas que premeia as duplas por atingirem metas diárias de velocidade, volume e consistência, fomentando a competição saudável.
+## Enable write operations
 
-Gráficos Interativos:
+By default, only GET operation is allowed, thanks to the contribution by [@VicAv99](https://www.github.com/VicAv99) at [#6](https://github.com/kitloong/json-server-vercel/issues/6), we can now enable write operations as well.
 
-Classificação de Eficiência: Um ranking visual das duplas mais produtivas.
+You can find the example code in [`api/server.js`](./api/server.js).
 
-Giro de Doca: Mostra quantos veículos cada doca processou.
+## Reference
 
-Relatórios e Exportação: Exporte todos os dados detalhados das operações para um ficheiro Excel.
-
-🛠️ Tecnologias Utilizadas
-HTML5
-
-Tailwind CSS para estilização.
-
-JavaScript (Vanilla) para toda a lógica e interatividade.
-
-Chart.js para a visualização de dados e gráficos.
-
-html2canvas para a funcionalidade de captura de ecrã.
-
-🚀 Como Usar
-Como este é um projeto frontend-only, não é necessária qualquer instalação ou servidor.
-
-Clone ou descarregue os ficheiros do repositório.
-
-Abra o ficheiro dashboard.html em qualquer navegador de internet moderno (Chrome, Firefox, Edge).
-
-Toda a informação será guardada localmente no seu navegador.
+1. https://github.com/typicode/json-server
+2. https://vercel.com
+3. https://shadowsmith.com/how-to-deploy-an-express-api-to-vercel
