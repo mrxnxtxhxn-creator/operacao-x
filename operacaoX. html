@@ -164,44 +164,10 @@
 
     </div>
 
-    <!-- Modal de Confirmação Geral -->
-    <div id="confirmModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden">
-        <div class="bg-gray-800 p-6 rounded-lg text-white text-center w-full max-w-sm">
-            <h4 class="text-lg font-bold mb-2">Confirmar Ação</h4><p id="confirmModalText" class="mb-4"></p>
-            <div class="flex justify-center gap-4">
-                <button id="confirmBtn" class="bg-red-600 hover:bg-red-700 font-bold py-2 px-4 rounded">Sim, Tenho Certeza</button>
-                <button id="cancelBtn" class="bg-gray-600 hover:bg-gray-700 font-bold py-2 px-4 rounded">Cancelar</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Modal para Docar Carreta -->
-    <div id="carretaModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden">
-        <div class="bg-gray-800 p-6 rounded-lg text-white w-full max-w-sm">
-            <h4 class="text-lg font-bold mb-4">Ocupar Doca com Carreta</h4>
-            <p class="text-sm text-gray-400 mb-4">Selecione uma doca livre para ocupar manualmente com uma carreta.</p>
-            <select id="carretaDockSelect" class="w-full bg-gray-700 text-white rounded-md p-2 mb-4"></select>
-            <div class="flex justify-center gap-4">
-                <button id="confirmCarretaBtn" class="bg-blue-600 hover:bg-blue-700 font-bold py-2 px-4 rounded">Confirmar</button>
-                <button id="cancelCarretaBtn" class="bg-gray-600 hover:bg-gray-700 font-bold py-2 px-4 rounded">Cancelar</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Modal para Senha do Motorista -->
-    <div id="senhaModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden">
-        <div class="bg-gray-800 p-8 rounded-lg text-white text-center w-full max-w-sm">
-            <h4 class="text-2xl font-bold mb-4">Registro Concluído!</h4>
-            <p class="text-lg mb-2">Motorista: <strong id="senhaMotoristaNome" class="text-cyan-400"></strong></p>
-            <p class="text-lg mb-6">A sua senha é a posição:</p>
-            <div class="bg-blue-600 text-white font-bold text-6xl rounded-lg p-4 mb-6">
-                <span id="senhaPosicao"></span>
-            </div>
-            <p class="text-sm text-gray-400 mb-6">Por favor, tire um print desta tela e aguarde ser chamado.</p>
-            <button id="fecharSenhaModalBtn" class="bg-gray-600 hover:bg-gray-700 font-bold py-2 px-6 rounded w-full">OK</button>
-        </div>
-    </div>
-
+    <!-- Modals -->
+    <div id="confirmModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden"><div class="bg-gray-800 p-6 rounded-lg text-white text-center w-full max-w-sm"><h4 class="text-lg font-bold mb-2">Confirmar Ação</h4><p id="confirmModalText" class="mb-4"></p><div class="flex justify-center gap-4"><button id="confirmBtn" class="bg-red-600 hover:bg-red-700 font-bold py-2 px-4 rounded">Sim, Tenho Certeza</button><button id="cancelBtn" class="bg-gray-600 hover:bg-gray-700 font-bold py-2 px-4 rounded">Cancelar</button></div></div></div>
+    <div id="carretaModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden"><div class="bg-gray-800 p-6 rounded-lg text-white w-full max-w-sm"><h4 class="text-lg font-bold mb-4">Ocupar Doca com Carreta</h4><p class="text-sm text-gray-400 mb-4">Selecione uma doca livre para ocupar manualmente com uma carreta.</p><select id="carretaDockSelect" class="w-full bg-gray-700 text-white rounded-md p-2 mb-4"></select><div class="flex justify-center gap-4"><button id="confirmCarretaBtn" class="bg-blue-600 hover:bg-blue-700 font-bold py-2 px-4 rounded">Confirmar</button><button id="cancelCarretaBtn" class="bg-gray-600 hover:bg-gray-700 font-bold py-2 px-4 rounded">Cancelar</button></div></div></div>
+    <div id="senhaModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden"><div class="bg-gray-800 p-8 rounded-lg text-white text-center w-full max-w-sm"><h4 class="text-2xl font-bold mb-4">Registro Concluído!</h4><p class="text-lg mb-2">Motorista: <strong id="senhaMotoristaNome" class="text-cyan-400"></strong></p><p class="text-lg mb-6">A sua senha é a posição:</p><div class="bg-blue-600 text-white font-bold text-6xl rounded-lg p-4 mb-6"><span id="senhaPosicao"></span></div><p class="text-sm text-gray-400 mb-6">Por favor, tire um print desta tela e aguarde ser chamado.</p><button id="fecharSenhaModalBtn" class="bg-gray-600 hover:bg-gray-700 font-bold py-2 px-6 rounded w-full">OK</button></div></div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -226,9 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let state = {
             filaDeEspera: [],
             docas: [],
-            totalPacotesMeta: 5000,
             operacaoIniciada: false,
-            historicoEntradas: {},
             pacotesDescarregadosTotal: 0,
             logEventos: [],
             analiseDuplasData: [],
@@ -501,7 +465,6 @@ document.addEventListener('DOMContentLoaded', () => {
             logContainer.innerHTML = state.logEventos.map(item => `<div class="flex items-start"><i class="fas fa-info-circle text-gray-500 mr-3 mt-1"></i><div><span class="font-bold text-gray-400">${item.hora}</span>: ${item.mensagem}</div></div>`).join('') || '<p class="text-gray-500">Aguardando eventos...</p>';
             
             const pacotesNaFila = state.filaDeEspera.reduce((acc, m) => acc + m.pacotes, 0);
-            
             charts.volumeRecebido.data.datasets[0].data = [state.pacotesDescarregadosTotal, pacotesNaFila];
             charts.volumeRecebido.update();
         };
@@ -668,7 +631,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('carretaModal').classList.add('hidden');
                 }
             });
-
+            
             document.getElementById('addMotoristaBtn').addEventListener('click', () => {
                 const nomeInput = document.getElementById('nomeMotoristaInput');
                 const pacotesInput = document.getElementById('pacotesInput');
